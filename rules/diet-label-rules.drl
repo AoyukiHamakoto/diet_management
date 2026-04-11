@@ -1,0 +1,44 @@
+package rules
+
+import com.diet.entity.HealthProfile
+import com.diet.entity.DietTag
+import com.diet.entity.HealthProfile.Target
+import com.diet.entity.HealthProfile.ExerciseFrequency
+
+dialect "java"
+
+// 规则1：BMI判定 - 偏胖(24-28)推荐低卡
+rule "BMI Overweight"
+when
+    $profile : HealthProfile(bmi != null)
+    eval($profile.getBmi().doubleValue() > 24 && $profile.getBmi().doubleValue() <= 28)
+then
+    insert(new DietTag($profile.getUserId(), "LOW_CALORIE", 0.9, "BMI_RULE"));
+end
+
+// 规则2：健身目标 - 增肌需要高蛋白高热量
+rule "Muscle Building Goal"
+when
+    $profile : HealthProfile(target == Target.BUILD_MUSCLE)
+then
+    insert(new DietTag($profile.getUserId(), "HIGH_PROTEIN", 0.95, "GOAL_RULE"));
+    insert(new DietTag($profile.getUserId(), "HIGH_CALORIE", 0.8, "GOAL_RULE"));
+end
+
+// 规则3：过敏原映射 - 乳糖不耐受/牛奶过敏
+rule "Lactose Allergy"
+when
+    $profile : HealthProfile(allergyTags != null)
+    eval($profile.getAllergyTags().contains("牛奶") || $profile.getAllergyTags().contains("lactose") || $profile.getAllergyTags().contains("乳糖"))
+then
+    insert(new DietTag($profile.getUserId(), "DAIRY_FREE", 1.0, "ALLERGY_RULE"));
+end
+
+// 规则4：组合规则 - 减脂+高强度运动=低碳高蛋白
+rule "Fat Loss and High Exercise"
+when
+    $profile : HealthProfile(target == Target.LOSE_WEIGHT, exerciseFrequency == ExerciseFrequency.HIGH)
+then
+    insert(new DietTag($profile.getUserId(), "LOW_CARB", 0.85, "COMBO_RULE"));
+    insert(new DietTag($profile.getUserId(), "HIGH_PROTEIN", 0.9, "COMBO_RULE"));
+end

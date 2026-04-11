@@ -1,0 +1,91 @@
+spring:
+  application:
+    name: diet-management
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 默认账号 root / 密码 123456（与 docker-compose、env.example、本地文档一致）
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:diet_management}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DB:0}
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+  flyway:
+    # 新库可设环境变量 FLYWAY_ENABLED=true 自动执行 migration；已有手工建表的数据库请保持 false 并执行 database/patch_feedback_v15_columns.sql
+    enabled: ${FLYWAY_ENABLED:false}
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# File upload. Production: set env FILE_UPLOAD_DIR
+file:
+  upload-dir: ${FILE_UPLOAD_DIR:${user.dir}/uploads}
+  serve-path: /uploads
+
+# MyBatis-Plus
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.diet.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    default-enum-type-handler: org.apache.ibatis.type.EnumTypeHandler
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# JWT（生产环境请设置环境变量 JWT_SECRET）
+jwt:
+  secret: ${JWT_SECRET:diet-management-jwt-secret-key-at-least-256-bits-long-for-hs256-algorithm}
+  expiration: 86400000 # access_token 24 hours
+  refresh-expiration: 604800000 # refresh_token 7 days
+
+auth:
+  register-verification-code: 123456
+  # 登录防暴力破解（连续失败锁定）
+  login:
+    max-attempts: 5 # 窗口内允许的最大失败次数
+    window-minutes: 15 # 失败计数滑动窗口
+    lock-minutes: 15 # 触发锁定后的锁定时长
+
+# SpringDoc OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+
+# System business switches
+app:
+  plan:
+    audit-required: true
+
+# Rules (Drools) writable directory for admin editing; reload on save
+rules:
+  file-path: ${user.dir}/rules
+  auto-reload: true

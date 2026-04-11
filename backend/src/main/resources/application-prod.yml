@@ -1,0 +1,12 @@
+# Use with --spring.profiles.active=prod or env SPRING_PROFILES_ACTIVE=prod
+
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+logging:
+  level:
+    root: INFO
+    com.diet: INFO

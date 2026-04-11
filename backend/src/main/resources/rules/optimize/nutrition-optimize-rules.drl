@@ -1,0 +1,34 @@
+package rules.optimize
+
+import com.diet.dto.MealPlanSuggestionDTO
+import com.diet.entity.HealthProfile
+
+dialect "java"
+
+// 第二层 Drools：在营养计算层（meal-plan-rules）之后做「优化过滤」——安全底线与上限收紧
+
+rule "Optimize floor calories vs TDEE"
+no-loop true
+when
+    $p : HealthProfile(tdee != null)
+    $s : MealPlanSuggestionDTO()
+    eval($s.getSuggestedCalories() < Math.max(1200.0, $p.getTdee().doubleValue() * 0.55))
+then
+    int floor = (int) Math.round(Math.max(1200.0, $p.getTdee().doubleValue() * 0.55));
+    $s.setSuggestedCalories(floor);
+    $s.addFlag("优化过滤层：热量底线（≥max(1200,TDEE×55%)）");
+    update($s);
+end
+
+rule "Optimize cap aggressive fat loss vs TDEE"
+no-loop true
+when
+    $p : HealthProfile(tdee != null)
+    $s : MealPlanSuggestionDTO(planMode == "AGGRESSIVE_FAT_LOSS")
+    eval($s.getSuggestedCalories() > $p.getTdee().doubleValue() * 0.85)
+then
+    int cap = (int) Math.round($p.getTdee().doubleValue() * 0.85);
+    $s.setSuggestedCalories(cap);
+    $s.addFlag("优化过滤层：激进减脂热量上限 TDEE×85%");
+    update($s);
+end

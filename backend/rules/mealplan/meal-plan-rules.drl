@@ -1,0 +1,47 @@
+package rules.mealplan
+
+import com.diet.dto.MealPlanSuggestionDTO
+import com.diet.entity.HealthProfile
+import com.diet.entity.DietTag
+
+dialect "java"
+
+// 规则1：减脂 + BMI>28 + 高运动频率 => 激进减脂（TDEE * 0.75）
+rule "Aggressive Fat Loss Calorie Suggestion"
+when
+    $profile : HealthProfile(target == HealthProfile.Target.LOSE_WEIGHT,
+                             bmi != null,
+                             exerciseFrequency == HealthProfile.ExerciseFrequency.HIGH)
+    $suggestion : MealPlanSuggestionDTO(planMode != "AGGRESSIVE_FAT_LOSS")
+    eval($profile.getBmi().doubleValue() > 28)
+then
+    int suggested = (int) Math.round($profile.getTdee().doubleValue() * 0.75);
+    $suggestion.setSuggestedCalories(suggested);
+    $suggestion.setPlanMode("AGGRESSIVE_FAT_LOSS");
+    $suggestion.addFlag("激进减脂模式");
+    update($suggestion);
+end
+
+// 规则2：有增肌标签 + 用户设置的运动时段为晚间 => 晚餐蛋白增强（练后餐）
+rule "Evening Workout Muscle Dinner"
+when
+    $suggestion : MealPlanSuggestionDTO(workoutTime == "EVENING", dinnerTag != "POST_WORKOUT_MEAL")
+    exists DietTag(tagName == "HIGH_PROTEIN")
+then
+    $suggestion.setDinnerProteinBoostRatio(1.20);
+    $suggestion.setDinnerTag("POST_WORKOUT_MEAL");
+    $suggestion.addFlag("晚餐蛋白增强（练后餐）：基于您的晚间训练偏好");
+    update($suggestion);
+end
+
+// 规则3：周末 + 维持目标 => 允许欺骗餐，热量上限放宽10%
+rule "Weekend Maintain Cheat Meal"
+when
+    $profile : HealthProfile(target == HealthProfile.Target.MAINTAIN)
+    $suggestion : MealPlanSuggestionDTO(weekend == true, allowCheatMeal == false)
+then
+    $suggestion.setAllowCheatMeal(true);
+    $suggestion.setCalorieUpperMultiplier(1.10);
+    $suggestion.addFlag("周末可放宽热量上限10%");
+    update($suggestion);
+end

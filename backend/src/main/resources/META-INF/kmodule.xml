@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kmodule xmlns="http://www.drools.org/xsd/kmodule">
+    <kbase name="dietRules" packages="rules" default="true">
+        <ksession name="dietSession" type="stateful" default="true"/>
+        <ksession name="dietStatelessSession" type="stateless" default="false"/>
+    </kbase>
+    <kbase name="mealPlanRules" packages="rules.mealplan" default="false">
+        <ksession name="mealPlanSession" type="stateful" default="false"/>
+    </kbase>
+    <kbase name="nutritionOptimizeRules" packages="rules.optimize" default="false">
+        <ksession name="nutritionOptimizeSession" type="stateful" default="false"/>
+    </kbase>
+</kmodule>

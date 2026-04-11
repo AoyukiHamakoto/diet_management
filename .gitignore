@@ -1,0 +1,16 @@
+**/node_modules/
+**/dist/
+**/target/
+**/.vite/
+
+.env
+.env.local
+.env.*.local
+frontend/.env.production
+backend/src/main/resources/application-local.yml
+
+.idea/
+.vscode/
+*.log
+.DS_Store
+Thumbs.db
