@@ -93,8 +93,13 @@ diet_management/
 │   ├── package.json
 │   └── vite.config.js
 │
-├── database/
-│   ├── schema.sql               # 建库并 SOURCE db/migration/V1__init_schema.sql（项目根执行）
+├── database/                    # 本项目全部 SQL 统一放此目录
+│   ├── migration/               # Flyway 版本脚本（唯一 DDL 来源；backend 打包时并入 classpath）
+│   │   ├── V1__init_schema.sql
+│   │   └── V2__ensure_post_like_comment_like_count.sql
+│   ├── schema.sql               # 手工：建库并 SOURCE migration/V1（项目根执行）
+│   ├── init-db.sql              # 仅建库
+│   ├── fix_like_count_columns.sql  # 旧库补 like_count（Flyway 未开时，幂等）
 │   └── demo_data.sql            # 演示数据，可选
 │
 ├── backend/src/main/java/com/diet/
@@ -155,11 +160,9 @@ diet_management/
 │   │   └── JwtUtil.java
 │   └── DietManagementApplication.java
 │
-├── src/main/resources/
+├── backend/src/main/resources/
 │   ├── application.yml
 │   ├── application-dev.yml
-│   ├── db/migration/           # Flyway 迁移（已合并为单文件）
-│   │   └── V1__init_schema.sql
 │   ├── META-INF/
 │   │   └── kmodule.xml         # Drools 配置
 │   └── rules/
@@ -167,7 +170,7 @@ diet_management/
 │
 ├── scripts/
 │   ├── start-all.bat           # Windows 一键启动
-│   └── init-db.sql             # 手动建库脚本
+│   └── stop-all.bat
 ├── docker-compose.yml          # MySQL + Redis
 └── README.md
 ```
@@ -243,8 +246,8 @@ diet_management/
 
 ## 数据库结构
 
-- 使用 Flyway 进行版本管理；表结构唯一来源为 `backend/src/main/resources/db/migration/V1__init_schema.sql`
-- 手工一键建表可用 `database/schema.sql`（建库后 `SOURCE` 上述 V1 文件，须在项目根目录执行）
+- 使用 Flyway 进行版本管理；表结构唯一来源为 `database/migration/V1__init_schema.sql`（打包时由 Maven 映射到 `classpath:db/migration`）
+- 手工一键建表可用 `database/schema.sql`（建库后 `SOURCE database/migration/V1__init_schema.sql`，须在项目根目录执行）
 - 示例数据脚本见 `database/demo_data.sql`（可选，用于答辩演示）
 
 ## Redis 使用说明
@@ -320,7 +323,7 @@ scripts\stop-all.bat
    ```bash
    mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS diet_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
    ```
-2. 启动后端时 Flyway 会自动执行 `src/main/resources/db/migration/` 下的脚本，完成表结构创建。
+2. 启动后端时 Flyway 会自动执行 `database/migration/` 下的脚本（打包进 `classpath:db/migration`），完成表结构创建。
 3. 若需**演示/答辩用示例数据**，再执行：
    ```bash
    mysql -u root -p diet_management < database/demo_data.sql
@@ -330,7 +333,7 @@ scripts\stop-all.bat
 **方式 B：完全手动初始化**
 
 ```bash
-# 1. 建库 + 建表（在项目根目录；脚本会加载 V1__init_schema.sql）
+# 1. 建库 + 建表（在项目根目录；脚本会加载 database/migration/V1__init_schema.sql）
 mysql -u root -p < database/schema.sql
 
 # 2. （可选）导入演示数据，约 30 用户、150 菜谱、500 计划等
@@ -338,7 +341,7 @@ mysql -u root -p diet_management < database/demo_data.sql
 ```
 
 - 脚本路径说明：
-  - `database/schema.sql`：仅建库并导入 `V1__init_schema.sql`（与 Flyway 一致）。
+  - `database/schema.sql`：仅建库并导入 `database/migration/V1__init_schema.sql`（与 Flyway 一致）。
   - `database/demo_data.sql`：大量示例数据（用户、健康档案、菜谱、计划、反馈、体重、通知等），适合演示与答辩。
 
 ### 三、配置修改
@@ -455,7 +458,7 @@ npm run preview              # 预览生产构建
 
 5. **接口报错 `Unknown column 'like_count' in 'field list'`（post / post_comment）**
    - 原因：本地库是旧版手工建表或 **Flyway 默认关闭**（`FLYWAY_ENABLED` 未打开），表结构未随代码升级；`CREATE TABLE IF NOT EXISTS` 也不会给已有表加列。这是**库与后端实体不一致**，不是 Mapper 写错列名。
-   - 处理：在目标库执行 `scripts/fix_like_count_columns.sql`（幂等），或设置 `FLYWAY_ENABLED=true` 后重启后端让 `V2__ensure_post_like_comment_like_count.sql` 自动执行。Windows 下请用 **cmd** 执行 `mysql ... < scripts\fix_like_count_columns.sql`，勿用 PowerShell 管道导入（易损坏 SQL 引号）。
+   - 处理：在目标库执行 `database/fix_like_count_columns.sql`（幂等），或设置 `FLYWAY_ENABLED=true` 后重启后端让 `database/migration/V2__ensure_post_like_comment_like_count.sql` 自动执行。Windows 下请用 **cmd** 执行 `mysql ... < database\fix_like_count_columns.sql`，勿用 PowerShell 管道导入（易损坏 SQL 引号）。
 
 6. **端口被占用**
    - 后端端口在 `application.yml` 的 `server.port`（默认 8080）。

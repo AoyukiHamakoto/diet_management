@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 /**
- * 生成演示密码 123456 的 BCrypt 哈希，用于 init_demo_data.sql 和 patch_demo_passwords.sql
+ * 生成演示密码 123456 的 BCrypt 哈希，用于 database/demo_data.sql 中的演示用户密码字段
  */
 class PasswordHashTest {
 

@@ -81,7 +81,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<Void> handleDataAccess(DataAccessException ex, HttpServletRequest request) {
         log.error("Data access failed: {} — {}", request.getRequestURI(), ex.getMostSpecificCause().getMessage());
-        return Result.error(500, "数据库访问异常，请确认已执行 Flyway 迁移 V1__init_schema.sql（含 post / post_comment 等表结构）");
+        return Result.error(500, "数据库访问异常，请确认已执行 Flyway 迁移 database/migration/V1__init_schema.sql（含 post / post_comment 等表结构）");
     }
 
     @ExceptionHandler(PersistenceException.class)
@@ -89,7 +89,7 @@ public class GlobalExceptionHandler {
     public Result<Void> handleMyBatisPersistence(PersistenceException ex, HttpServletRequest request) {
         Throwable root = ex.getCause() != null ? ex.getCause() : ex;
         log.error("MyBatis persistence error: {} — {}", request.getRequestURI(), root.getMessage());
-        return Result.error(500, "数据库访问异常，请确认已执行 Flyway 迁移 V1__init_schema.sql（含 post / post_comment 等表结构）");
+        return Result.error(500, "数据库访问异常，请确认已执行 Flyway 迁移 database/migration/V1__init_schema.sql（含 post / post_comment 等表结构）");
     }
 
     @ExceptionHandler(Exception.class)

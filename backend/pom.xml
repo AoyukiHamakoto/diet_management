@@ -167,6 +167,16 @@
     </dependencies>
 
     <build>
+        <!-- Flyway 脚本统一维护于项目根 database/migration/，打包时并入 classpath:db/migration -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>../database/migration</directory>
+                <targetPath>db/migration</targetPath>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

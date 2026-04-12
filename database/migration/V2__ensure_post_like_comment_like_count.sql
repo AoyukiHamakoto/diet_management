@@ -1,7 +1,5 @@
--- 在「未启用 Flyway」或迁移未跑到补列逻辑时，手工为旧表补 like_count（幂等，可重复执行）。
--- 用法（示例）：在项目根目录执行
---   mysql -u root -p diet_management < scripts/fix_like_count_columns.sql
--- Windows 请用 cmd 重定向；勿用 PowerShell 管道喂给 mysql，易破坏引号导致语法错误。
+-- 旧库在更早版本已创建 post / post_comment 但无 like_count 时补列（幂等）。
+-- 若 Flyway 未启用，请从项目根手动执行 database/fix_like_count_columns.sql。
 
 SET @sql := (
   SELECT IF(
