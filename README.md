@@ -30,6 +30,16 @@
 | ECharts         | 5.5.x  | 数据可视化 |
 | vite-plugin-pwa | 0.20.x | PWA 支持   |
 
+## 服务器部署参数（宝塔）
+
+已按当前服务器信息提供生产配置（见 `frontend/.env.production`）：
+
+- 前端访问地址：`http://43.164.2.245:3000`
+- 后端 API 地址：`http://43.164.2.245:8080/api`
+- 管理后台地址：`http://43.164.2.245:3000/admin`
+
+若后续更换服务器 IP 或端口，只需更新 `frontend/.env.production` 的 `VITE_API_BASE` 并重新执行前端构建。
+
 ## 项目结构
 
 ```
