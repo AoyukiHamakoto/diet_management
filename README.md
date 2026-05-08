@@ -107,10 +107,8 @@ diet_management/
 │   ├── migration/               # Flyway 版本脚本（唯一 DDL 来源；backend 打包时并入 classpath）
 │   │   ├── V1__init_schema.sql
 │   │   └── V2__ensure_post_like_comment_like_count.sql
-│   ├── schema.sql               # 手工：建库并 SOURCE migration/V1（项目根执行）
-│   ├── init-db.sql              # 仅建库
-│   ├── fix_like_count_columns.sql  # 旧库补 like_count（Flyway 未开时，幂等）
-│   └── demo_data.sql            # 演示数据，可选
+│   ├── full_deploy.sql          # 服务器一键部署（建库+建表+演示数据）
+│   └── demo_data.sql            # 演示数据（由 full_deploy.sql 自动导入）
 │
 ├── backend/src/main/java/com/diet/
 │   ├── common/
@@ -257,8 +255,8 @@ diet_management/
 ## 数据库结构
 
 - 使用 Flyway 进行版本管理；表结构唯一来源为 `database/migration/V1__init_schema.sql`（打包时由 Maven 映射到 `classpath:db/migration`）
-- 手工一键建表可用 `database/schema.sql`（建库后 `SOURCE database/migration/V1__init_schema.sql`，须在项目根目录执行）
-- 示例数据脚本见 `database/demo_data.sql`（可选，用于答辩演示）
+- 服务器一键初始化可用 `database/full_deploy.sql`（自动建库、建表、导入演示数据）
+- 示例数据脚本为 `database/demo_data.sql`（通常由 `full_deploy.sql` 自动导入）
 
 ## Redis 使用说明
 
@@ -334,25 +332,21 @@ scripts\stop-all.bat
    mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS diet_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
    ```
 2. 启动后端时 Flyway 会自动执行 `database/migration/` 下的脚本（打包进 `classpath:db/migration`），完成表结构创建。
-3. 若需**演示/答辩用示例数据**，再执行：
+3. 若你要在服务器直接“一次性导入结构+演示数据”，推荐执行：
    ```bash
-   mysql -u root -p diet_management < database/demo_data.sql
+   mysql -u root -p < database/full_deploy.sql
    ```
-   （需先有一次后端启动或从项目根执行过 `mysql … < database/schema.sql`，保证表已存在。）
 
 **方式 B：完全手动初始化**
 
 ```bash
-# 1. 建库 + 建表（在项目根目录；脚本会加载 database/migration/V1__init_schema.sql）
-mysql -u root -p < database/schema.sql
-
-# 2. （可选）导入演示数据，约 30 用户、150 菜谱、500 计划等
-mysql -u root -p diet_management < database/demo_data.sql
+# 一键建库 + 建表 + 演示数据（推荐服务器部署）
+mysql -u root -p < database/full_deploy.sql
 ```
 
 - 脚本路径说明：
-  - `database/schema.sql`：仅建库并导入 `database/migration/V1__init_schema.sql`（与 Flyway 一致）。
-  - `database/demo_data.sql`：大量示例数据（用户、健康档案、菜谱、计划、反馈、体重、通知等），适合演示与答辩。
+  - `database/full_deploy.sql`：建库 + 完整表结构 + 演示数据，一次执行即可。
+  - `database/demo_data.sql`：纯演示数据脚本（如仅补充数据可单独执行）。
 
 ### 三、配置修改
 
@@ -373,7 +367,7 @@ spring:
 ```
 
 - 若未安装 Redis，可暂时不改；后端会启动，仅 Redis 相关功能不可用。
-- 若你使用 `database/schema.sql` 手工建表，建议保持
+- 若你使用 `database/full_deploy.sql` 手工导入，建议保持
   `FLYWAY_ENABLED=false`（默认即 false），避免 Flyway 再次执行同一套 DDL。
 - 若你想走 Flyway 自动迁移，请使用空库并设置 `FLYWAY_ENABLED=true`。
 
@@ -463,12 +457,12 @@ npm run preview              # 预览生产构建
    - 前端通过 Vite 代理将 `/api` 转发到 `http://localhost:8080`，请勿直接改后端 context-path。
 
 4. **导入 demo_data.sql 报错**
-   - 必须先有表结构：先在项目根执行 `database/schema.sql`，或先启动一次后端（Flyway 建表），再执行 `database/demo_data.sql`。
+   - 必须先有表结构：先在项目根执行 `database/full_deploy.sql`，或先启动一次后端（Flyway 建表），再执行 `database/demo_data.sql`。
    - 示例数据需要 MySQL 8.0+（脚本中使用了 `WITH RECURSIVE`）。
 
 5. **接口报错 `Unknown column 'like_count' in 'field list'`（post / post_comment）**
-   - 原因：本地库是旧版手工建表或 **Flyway 默认关闭**（`FLYWAY_ENABLED` 未打开），表结构未随代码升级；`CREATE TABLE IF NOT EXISTS` 也不会给已有表加列。这是**库与后端实体不一致**，不是 Mapper 写错列名。
-   - 处理：在目标库执行 `database/fix_like_count_columns.sql`（幂等），或设置 `FLYWAY_ENABLED=true` 后重启后端让 `database/migration/V2__ensure_post_like_comment_like_count.sql` 自动执行。Windows 下请用 **cmd** 执行 `mysql ... < database\fix_like_count_columns.sql`，勿用 PowerShell 管道导入（易损坏 SQL 引号）。
+   - 原因：数据库结构过旧，未执行最新完整初始化。
+   - 处理：建议直接重建目标库并执行 `database/full_deploy.sql`，或启用 `FLYWAY_ENABLED=true` 后重启后端执行迁移。
 
 6. **端口被占用**
    - 后端端口在 `application.yml` 的 `server.port`（默认 8080）。
@@ -490,8 +484,8 @@ npm run preview              # 预览生产构建
 ```bash
 # 创建数据库（或使用 Flyway 自动创建）
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS diet_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-# 表结构：首次启动后端由 Flyway 创建，或在项目根手动执行：
-mysql -u root -p < database/schema.sql
+# 一键导入（建库+建表+演示数据）：
+mysql -u root -p < database/full_deploy.sql
 # 演示数据（可选）：
 mysql -u root -p diet_management < database/demo_data.sql
 ```

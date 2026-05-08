@@ -4,9 +4,9 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    # 默认账号 root / 密码 123456（与 docker-compose、env.example、本地文档一致）
+    # 默认账号 user / 密码 123456（服务器环境）
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:diet_management}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: ${DB_USERNAME:root}
+    username: ${DB_USERNAME:user}
     password: ${DB_PASSWORD:123456}
 
   data:

@@ -261,7 +261,7 @@ INSERT INTO `recipe` (`title`, `cover_image`, `ingredients`, `nutrition_info`, `
 ('西柚', NULL, '[{"name":"西柚","amount":"半个"}]', '{"protein":1,"carb":13,"fat":0,"calories":52}', 'SNACK', 0, 'EASY', '["加餐","低卡"]', '["LOW_CALORIE"]', 35, '8:88:4', 'APPROVED', NULL, NOW(), NOW());
 
 -- ------------------------------------------------------------
--- 5. 饮食计划 meal_plan - 500 条（user_id 1-25, recipe_id 1-65, 2024-10~2025-02）
+-- 5. 饮食计划 meal_plan - 500 条（user_id 1-25；recipe_id 按当前 recipe 表行数取模，与 fk_meal_plan_recipe 一致）
 -- ------------------------------------------------------------
 INSERT INTO `meal_plan` (`user_id`, `plan_date`, `meal_type`, `recipe_id`, `suggested_calories`, `status`, `audit_status`, `create_time`, `update_time`) VALUES
 (1,'2024-10-01','BREAKFAST',1,420,'COMPLETED','AUTO','2024-10-01 08:00:00','2024-10-01 08:00:00'),
@@ -323,7 +323,7 @@ INSERT INTO `meal_plan` (`user_id`, `plan_date`, `meal_type`, `recipe_id`, `sugg
 
 INSERT INTO `meal_plan` (`user_id`, `plan_date`, `meal_type`, `recipe_id`, `suggested_calories`, `status`, `audit_status`, `create_time`, `update_time`)
 WITH RECURSIVE seq AS (SELECT 0 AS n UNION ALL SELECT n+1 FROM seq WHERE n < 449)
-SELECT LEAST(25, 1 + (n DIV 20)), DATE_ADD('2024-10-15', INTERVAL (n DIV 4) DAY), ELT(1 + (n MOD 4), 'BREAKFAST','LUNCH','DINNER','SNACK'), 1 + (n MOD 65), (CASE (n MOD 4) WHEN 0 THEN 420 WHEN 1 THEN 560 WHEN 2 THEN 350 ELSE 100 END), ELT(1 + (n MOD 10), 'COMPLETED','COMPLETED','COMPLETED','COMPLETED','COMPLETED','COMPLETED','PLANNED','PLANNED','SKIPPED','OUT_EAT'), ELT(1 + (n MOD 10), 'AUTO','AUTO','AUTO','AUTO','AUTO','APPROVED','APPROVED','PENDING','AUTO','AUTO'), DATE_ADD('2024-10-15', INTERVAL (n DIV 4) DAY) + INTERVAL (8 + (n MOD 4)*3) HOUR, DATE_ADD('2024-10-15', INTERVAL (n DIV 4) DAY) + INTERVAL (8 + (n MOD 4)*3) HOUR FROM seq;
+SELECT LEAST(25, 1 + (n DIV 20)), DATE_ADD('2024-10-15', INTERVAL (n DIV 4) DAY), ELT(1 + (n MOD 4), 'BREAKFAST','LUNCH','DINNER','SNACK'), 1 + (n MOD (SELECT COUNT(*) FROM `recipe`)), (CASE (n MOD 4) WHEN 0 THEN 420 WHEN 1 THEN 560 WHEN 2 THEN 350 ELSE 100 END), ELT(1 + (n MOD 10), 'COMPLETED','COMPLETED','COMPLETED','COMPLETED','COMPLETED','COMPLETED','PLANNED','PLANNED','SKIPPED','OUT_EAT'), ELT(1 + (n MOD 10), 'AUTO','AUTO','AUTO','AUTO','AUTO','APPROVED','APPROVED','PENDING','AUTO','AUTO'), DATE_ADD('2024-10-15', INTERVAL (n DIV 4) DAY) + INTERVAL (8 + (n MOD 4)*3) HOUR, DATE_ADD('2024-10-15', INTERVAL (n DIV 4) DAY) + INTERVAL (8 + (n MOD 4)*3) HOUR FROM seq;
 
 -- 6. 反馈 feedback - 200 条
 INSERT INTO `feedback` (`user_id`, `plan_id`, `rating`, `feedback_tags`, `taste_feedback`, `body_reaction`, `comment`, `create_time`) VALUES
